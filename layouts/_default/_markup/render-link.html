@@ -1,0 +1,1 @@
+{{- $url := .Destination -}}<a href="{{ $url }}"{{ if strings.HasPrefix $url "http" }} target="_blank" rel="noopener noreferrer"{{ end }}>{{ .Text | safeHTML }}</a>

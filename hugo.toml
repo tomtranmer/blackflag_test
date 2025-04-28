@@ -1,0 +1,6 @@
+baseURL = '/'
+languageCode = 'en-us'
+title = 'We are the Black Flag'
+
+[markup.goldmark.renderer]
+unsafe = true

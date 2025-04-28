@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="home-link">
+        <a href="/">Home</a>
+    </div>
+    <header>
+        <h2>
+            <img src="/img/black_flag_noclip.png" alt="Black Flag Logo" class="logo">
+            Dashboard
+            <img src="/img/black_flag_noclip.png" alt="Black Flag Logo" class="logo">
+        </h2>
+    </header>
+    
+<div class="dashboard-container">
+    <h1>Dashboard</h1>
+    <p>Welcome to your Black Flag dashboard. Here you can manage your participation in our community.</p>
+
+    
+    <div id="loading-message">Loading your profile...</div>
+    
+    <div id="dashboard-content" style="display: none;">
+        <div class="user-info">
+            <h2>Your Profile</h2>
+            <p id="user-id"></p>
+            <p id="user-email"></p>
+            <p id="user-wallet"></p>
+        </div>
+        
+        <div class="dashboard-actions">
+            <h2>Actions</h2>
+            <button id="logout-button" class="button">Logout</button>
+        </div>
+    </div>
+    
+    <div id="not-authenticated" style="display: none;">
+        <p>You need to login to view this page.</p>
+        <a href="/login" class="button">Go to Login</a>
+    </div>
+</div>
+
+<style>
+.dashboard-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 1rem;
+}
+
+.user-info, .dashboard-actions {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.button {
+    background: #333;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.button:hover {
+    background: #555;
+}
+</style>
+
+<script>
+
+const PRIVY_APP_ID = 'client-WY2fr1iUtnzfTBZERvcJvo37SUfw8gaCzT9Cn7ri4bTLa'; 
+const PRIVY_API_URL = 'https://auth.privy.io/api/v1';
+
+
+const loadingMessage = document.getElementById('loading-message');
+const dashboardContent = document.getElementById('dashboard-content');
+const notAuthenticated = document.getElementById('not-authenticated');
+const userIdElement = document.getElementById('user-id');
+const userEmailElement = document.getElementById('user-email');
+const userWalletElement = document.getElementById('user-wallet');
+const logoutButton = document.getElementById('logout-button');
+
+
+document.addEventListener('DOMContentLoaded', checkAuthentication);
+logoutButton.addEventListener('click', logout);
+
+async function checkAuthentication() {
+    const token = localStorage.getItem('privy_token');
+    
+    if (!token) {
+        showNotAuthenticated();
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${PRIVY_API_URL}/users/me`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'privy-app-id': PRIVY_APP_ID
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Authentication failed');
+        }
+        
+        const userData = await response.json();
+        displayUserData(userData);
+        
+    } catch (error) {
+        console.error('Authentication error:', error);
+        showNotAuthenticated();
+    }
+}
+
+function displayUserData(userData) {
+    userIdElement.textContent = `User ID: ${userData.id}`;
+    
+    if (userData.email) {
+        userEmailElement.textContent = `Email: ${userData.email}`;
+    } else {
+        userEmailElement.style.display = 'none';
+    }
+    
+    if (userData.wallet_address) {
+        userWalletElement.textContent = `Wallet: ${userData.wallet_address}`;
+    } else {
+        userWalletElement.style.display = 'none';
+    }
+    
+    loadingMessage.style.display = 'none';
+    dashboardContent.style.display = 'block';
+}
+
+function showNotAuthenticated() {
+    loadingMessage.style.display = 'none';
+    dashboardContent.style.display = 'none';
+    notAuthenticated.style.display = 'block';
+}
+
+async function logout() {
+    const token = localStorage.getItem('privy_token');
+    
+    if (token) {
+        try {
+            await fetch(`${PRIVY_API_URL}/auth/logout`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'privy-app-id': PRIVY_APP_ID
+                }
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    }
+    
+    localStorage.removeItem('privy_token');
+    window.location.href = '/';
+}
+</script>
+
+</body>
+</html>

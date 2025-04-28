@@ -1,0 +1,5 @@
+{{ $cols := split .Inner "|||" }}
+<div class="col-2">
+    <div>{{ index $cols 0 | markdownify }}</div>
+    <div>{{ index $cols 1 | markdownify }}</div>
+</div>
