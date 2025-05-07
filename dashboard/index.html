@@ -1,4 +1,132 @@
 <!doctype html><html lang=en><head><meta charset=UTF-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Dashboard</title>
 <link rel=stylesheet href=/styles.css></head><body><div class=home-link><a href=/>Home</a></div><header><h2><img src=/img/black_flag_noclip.png alt="Black Flag Logo" class=logo>
 Dashboard
-<img src=/img/black_flag_noclip.png alt="Black Flag Logo" class=logo></h2></header><div class=dashboard-container><h1>Dashboard</h1><p>Welcome to your Black Flag dashboard. Here you can manage your participation in our community.</p><div id=loading-message>Loading your profile...</div><div id=dashboard-content style=display:none><div class=user-info><h2>Your Profile</h2><p id=user-id></p><p id=user-email></p><p id=user-wallet></p></div><div class=dashboard-actions><h2>Actions</h2><button id=logout-button class=button>Logout</button></div></div><div id=not-authenticated style=display:none><p>You need to login to view this page.</p><a href=/login class=button>Go to Login</a></div></div><style>.dashboard-container{max-width:800px;margin:2rem auto;padding:1rem}.user-info,.dashboard-actions{margin-bottom:2rem;padding:1rem;border:1px solid #ddd;border-radius:8px}.button{background:#333;color:#fff;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;text-decoration:none}.button:hover{background:#555}</style><script>const PRIVY_APP_ID="client-WY2fr1iUtnzfTBZERvcJvo37SUfw8gaCzT9Cn7ri4bTLa",PRIVY_API_URL="https://auth.privy.io/api/v1",loadingMessage=document.getElementById("loading-message"),dashboardContent=document.getElementById("dashboard-content"),notAuthenticated=document.getElementById("not-authenticated"),userIdElement=document.getElementById("user-id"),userEmailElement=document.getElementById("user-email"),userWalletElement=document.getElementById("user-wallet"),logoutButton=document.getElementById("logout-button");document.addEventListener("DOMContentLoaded",checkAuthentication),logoutButton.addEventListener("click",logout);async function checkAuthentication(){const e=localStorage.getItem("privy_token");if(!e){showNotAuthenticated();return}try{const t=await fetch(`${PRIVY_API_URL}/users/me`,{method:"GET",headers:{Authorization:`Bearer ${e}`,"privy-app-id":PRIVY_APP_ID}});if(!t.ok)throw new Error("Authentication failed");const n=await t.json();displayUserData(n)}catch(e){console.error("Authentication error:",e),showNotAuthenticated()}}function displayUserData(e){userIdElement.textContent=`User ID: ${e.id}`,e.email?userEmailElement.textContent=`Email: ${e.email}`:userEmailElement.style.display="none",e.wallet_address?userWalletElement.textContent=`Wallet: ${e.wallet_address}`:userWalletElement.style.display="none",loadingMessage.style.display="none",dashboardContent.style.display="block"}function showNotAuthenticated(){loadingMessage.style.display="none",dashboardContent.style.display="none",notAuthenticated.style.display="block"}async function logout(){const e=localStorage.getItem("privy_token");if(e)try{await fetch(`${PRIVY_API_URL}/auth/logout`,{method:"POST",headers:{Authorization:`Bearer ${e}`,"privy-app-id":PRIVY_APP_ID}})}catch(e){console.error("Logout error:",e)}localStorage.removeItem("privy_token"),window.location.href="/"}</script></body></html>
+<img src=/img/black_flag_noclip.png alt="Black Flag Logo" class=logo></h2></header><div class=dashboard-container><h1>Dashboard</h1><p>Welcome to your Black Flag dashboard. Here you can manage your participation in our community.</p><div id=loading-message>Loading your profile...</div><div id=dashboard-content style=display:none><div class=user-info><h2>Your Profile</h2><p id=user-id></p><p id=user-email></p><p id=user-wallet></p></div><div class=dashboard-actions><h2>Actions</h2><button id=logout-button class=button>Logout</button></div></div><div id=not-authenticated style=display:none><p>You need to login to view this page.</p><a href=/login class=button>Go to Login</a></div></div><style>.dashboard-container{max-width:800px;margin:2rem auto;padding:1rem}.user-info,.dashboard-actions{margin-bottom:2rem;padding:1rem;border:1px solid #ddd;border-radius:8px}.button{background:#333;color:#fff;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;text-decoration:none}.button:hover{background:#555}</style><script>const PRIVY_APP_ID="client-WY2fr1iUtnzfTBZERvcJvo37SUfw8gaCzT9Cn7ri4bTLa",PRIVY_API_URL="https://auth.privy.io/api/v1",loadingMessage=document.getElementById("loading-message"),dashboardContent=document.getElementById("dashboard-content"),notAuthenticated=document.getElementById("not-authenticated"),userIdElement=document.getElementById("user-id"),userEmailElement=document.getElementById("user-email"),userWalletElement=document.getElementById("user-wallet"),logoutButton=document.getElementById("logout-button");
+
+document.addEventListener("DOMContentLoaded",checkAuthentication);
+logoutButton.addEventListener("click",logout);
+
+async function checkAuthentication(){
+    const token = localStorage.getItem("privy_token");
+    const walletAddress = localStorage.getItem("wallet_address");
+    
+    if (token) {
+        // Regular Privy token authentication flow
+        try {
+            const response = await fetch(`${PRIVY_API_URL}/users/me`, {
+                method: "GET",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "privy-app-id": PRIVY_APP_ID
+                }
+            });
+            
+            if (!response.ok) throw new Error("Authentication failed");
+            
+            const userData = await response.json();
+            displayUserData(userData);
+        } catch (e) {
+            console.error("Authentication error:", e);
+            // If token auth fails, check for fallback wallet auth
+            checkFallbackWalletAuth();
+        }
+    } else if (walletAddress) {
+        // Fallback wallet auth flow (when CORS prevented direct Privy API access)
+        checkFallbackWalletAuth();
+    } else {
+        // No authentication data found
+        showNotAuthenticated();
+    }
+}
+
+function checkFallbackWalletAuth() {
+    const walletAddress = localStorage.getItem("wallet_address");
+    const signature = localStorage.getItem("wallet_signature");
+    const message = localStorage.getItem("wallet_message");
+    
+    if (walletAddress && signature && message) {
+        // We have wallet auth data from our fallback method
+        const userData = {
+            wallet_address: walletAddress,
+            id: `wallet-${walletAddress.substring(0, 8)}`, // Generate a pseudo-ID
+            authenticated_via: "wallet-fallback"
+        };
+        
+        displayUserData(userData);
+        // Try to get a Privy token using server-side proxy if you have one
+        tryServerSideAuthentication(walletAddress, signature, message);
+    } else {
+        showNotAuthenticated();
+    }
+}
+
+// Optional: If you have a server-side endpoint that can proxy the Privy API call
+async function tryServerSideAuthentication(address, signature, message) {
+    try {
+        // This would be an API endpoint you control that makes the Privy API call server-side
+        // Not implementing this in the current solution since we don't have a server endpoint
+        console.log("Would attempt server-side authentication here if endpoint existed");
+    } catch (e) {
+        console.error("Server-side authentication attempt failed:", e);
+    }
+}
+
+function displayUserData(userData){
+    userIdElement.textContent = `User ID: ${userData.id}`;
+    
+    if (userData.email) {
+        userEmailElement.textContent = `Email: ${userData.email}`;
+        userEmailElement.style.display = "block";
+    } else {
+        userEmailElement.style.display = "none";
+    }
+    
+    if (userData.wallet_address) {
+        userWalletElement.textContent = `Wallet: ${userData.wallet_address}`;
+        userWalletElement.style.display = "block";
+    } else {
+        userWalletElement.style.display = "none";
+    }
+    
+    if (userData.authenticated_via) {
+        const authMethodElement = document.createElement("p");
+        authMethodElement.textContent = `Authentication Method: ${userData.authenticated_via}`;
+        userIdElement.after(authMethodElement);
+    }
+    
+    loadingMessage.style.display = "none";
+    dashboardContent.style.display = "block";
+}
+
+function showNotAuthenticated(){
+    loadingMessage.style.display = "none";
+    dashboardContent.style.display = "none";
+    notAuthenticated.style.display = "block";
+}
+
+async function logout(){
+    const token = localStorage.getItem("privy_token");
+    
+    if (token) {
+        try {
+            await fetch(`${PRIVY_API_URL}/auth/logout`, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "privy-app-id": PRIVY_APP_ID
+                }
+            });
+        } catch (e) {
+            console.error("Logout error:", e);
+        }
+    }
+    
+    // Clear all authentication data
+    localStorage.removeItem("privy_token");
+    localStorage.removeItem("wallet_address");
+    localStorage.removeItem("wallet_signature");
+    localStorage.removeItem("wallet_message");
+    localStorage.removeItem("wallet_chain_id");
+    
+    window.location.href = "/";
+}</script></body></html>
