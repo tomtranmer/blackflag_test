@@ -1,6 +1,4 @@
 // Add a new API endpoint to provide app configuration to the client
-import fetch from 'node-fetch';
-
 export default async function handler(req, res) {
   // Only allow GET requests
   if (req.method !== 'GET') {
