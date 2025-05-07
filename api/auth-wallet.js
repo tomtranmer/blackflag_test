@@ -6,6 +6,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Log request for debugging
+    console.log("Wallet auth request received");
+    
     // Get the Privy App ID from environment variables
     const PRIVY_APP_ID = process.env.PRIVY_APP_ID || "client-WY2fr1iUtnzfTBZERvcJvo37SUfw8gaCzT9Cn7ri4bTLa";
     
@@ -19,13 +22,41 @@ export default async function handler(req, res) {
       body: JSON.stringify(req.body)
     });
     
-    // Get the response data
-    const data = await response.json();
+    // Log the response status
+    console.log(`Privy API response status: ${response.status}`);
+    
+    // Check for empty response
+    const responseText = await response.text();
+    
+    // Only try to parse as JSON if we have content
+    let data;
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        return res.status(500).json({ 
+          error: 'Invalid response from Privy API',
+          details: `Failed to parse response: ${parseError.message}`
+        });
+      }
+    } else {
+      // Handle empty response
+      console.log("Empty response received from Privy API");
+      data = { message: "No content returned from API" };
+    }
     
     // Return the response with the same status code
-    return res.status(response.status).json(data);
+    return res.status(response.status).json(data || {});
   } catch (error) {
+    // Enhanced error logging
     console.error('Error proxying to Privy API:', error);
-    return res.status(500).json({ error: 'Failed to connect to Privy API' });
+    
+    // Return a more detailed error response
+    return res.status(500).json({ 
+      error: 'Failed to connect to Privy API',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 }

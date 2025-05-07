@@ -8,7 +8,8 @@ export default async function handler(req, res) {
   try {
     // Get the Privy App ID from environment variables or use fallback for development
     const privyAppId = process.env.PRIVY_APP_ID || "client-WY2fr1iUtnzfTBZERvcJvo37SUfw8gaCzT9Cn7ri4bTLa";
-    
+    console.log(`Using Privy App ID: ${privyAppId}...`);
+
     // Return public configuration that the client needs
     return res.status(200).json({
       privyAppId: privyAppId,

@@ -35,14 +35,34 @@ export default async function handler(req, res) {
     // Log the response status
     console.log(`Privy API response status: ${response.status}`);
     
-    // Get the response data
-    const data = await response.json();
+    // Check for empty response
+    const responseText = await response.text();
+    console.log("Raw response:", responseText);
+    
+    // Only try to parse as JSON if we have content
+    let data;
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        return res.status(500).json({ 
+          error: 'Invalid response from Privy API',
+          details: `Failed to parse response: ${parseError.message}`,
+          raw: responseText.substring(0, 200)
+        });
+      }
+    } else {
+      // Handle empty response
+      console.log("Empty response received from Privy API");
+      data = { message: "No content returned from API" };
+    }
     
     // Log a snippet of the response data
-    console.log("Privy API response data:", JSON.stringify(data).substring(0, 200) + "...");
+    console.log("Privy API response data:", JSON.stringify(data || {}).substring(0, 200) + "...");
     
     // Return the response with the same status code
-    return res.status(response.status).json(data);
+    return res.status(response.status).json(data || {});
   } catch (error) {
     // Enhanced error logging
     console.error('Error proxying to Privy API:', error);
