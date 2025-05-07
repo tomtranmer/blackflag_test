@@ -72,6 +72,7 @@ async function sendLoginEmail(){
     showStatus("Sending login link...", "info");
     
     try {
+        console.log("Calling auth-email API endpoint...");
         // Use our proxy API endpoint instead of calling Privy directly
         const response = await fetch(`/api/auth-email`, {
             method: "POST",
@@ -87,15 +88,27 @@ async function sendLoginEmail(){
             })
         });
         
-        const data = await response.json();
-        if(response.ok) {
-            showStatus("Login link sent! Please check your email.", "success");
-        } else {
-            throw new Error(data.error || data.message || "Failed to send login link");
+        console.log("API response status:", response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("API error response:", errorText);
+            try {
+                const errorJson = JSON.parse(errorText);
+                throw new Error(errorJson.details || errorJson.error || "Server error");
+            } catch (jsonError) {
+                throw new Error(`Server error (${response.status}): ${errorText.substring(0, 100)}`);
+            }
         }
+        
+        const data = await response.json();
+        console.log("API response:", data);
+        
+        showStatus("Login link sent! Please check your email.", "success");
     } catch(e) {
-        showStatus(e.message, "error");
         console.error("Email login error:", e);
+        // Show detailed error to the user
+        showStatus(`Authentication error: ${e.message}`, "error");
     }
 }
 

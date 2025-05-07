@@ -6,8 +6,21 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Log request for debugging
+    console.log("Email auth request received:", JSON.stringify({
+      body: req.body,
+      headers: {
+        // Log only non-sensitive headers
+        'content-type': req.headers['content-type'],
+      }
+    }));
+    
     // Get the Privy App ID from environment variables
     const PRIVY_APP_ID = process.env.PRIVY_APP_ID || "client-WY2fr1iUtnzfTBZERvcJvo37SUfw8gaCzT9Cn7ri4bTLa";
+    
+    // Log what we're about to do
+    console.log(`Using Privy App ID: ${PRIVY_APP_ID.substring(0, 10)}...`);
+    console.log("Attempting to call Privy API...");
     
     // Forward the request to Privy's API
     const response = await fetch('https://auth.privy.io/api/v1/auth/create-verification', {
@@ -19,13 +32,31 @@ export default async function handler(req, res) {
       body: JSON.stringify(req.body)
     });
     
+    // Log the response status
+    console.log(`Privy API response status: ${response.status}`);
+    
     // Get the response data
     const data = await response.json();
+    
+    // Log a snippet of the response data
+    console.log("Privy API response data:", JSON.stringify(data).substring(0, 200) + "...");
     
     // Return the response with the same status code
     return res.status(response.status).json(data);
   } catch (error) {
+    // Enhanced error logging
     console.error('Error proxying to Privy API:', error);
-    return res.status(500).json({ error: 'Failed to connect to Privy API' });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    // Return a more detailed error response
+    return res.status(500).json({ 
+      error: 'Failed to connect to Privy API',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 }
