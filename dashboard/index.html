@@ -1,23 +1,54 @@
 <!doctype html><html lang=en><head><meta charset=UTF-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Dashboard</title>
 <link rel=stylesheet href=/styles.css></head><body><div class=home-link><a href=/>Home</a></div><header><h2><img src=/img/black_flag_noclip.png alt="Black Flag Logo" class=logo>
 Dashboard
-<img src=/img/black_flag_noclip.png alt="Black Flag Logo" class=logo></h2></header><div class=dashboard-container><h1>Dashboard</h1><p>Welcome to your Black Flag dashboard. Here you can manage your participation in our community.</p><div id=loading-message>Loading your profile...</div><div id=dashboard-content style=display:none><div class=user-info><h2>Your Profile</h2><p id=user-id></p><p id=user-email></p><p id=user-wallet></p></div><div class=dashboard-actions><h2>Actions</h2><button id=logout-button class=button>Logout</button></div></div><div id=not-authenticated style=display:none><p>You need to login to view this page.</p><a href=/login class=button>Go to Login</a></div></div><style>.dashboard-container{max-width:800px;margin:2rem auto;padding:1rem}.user-info,.dashboard-actions{margin-bottom:2rem;padding:1rem;border:1px solid #ddd;border-radius:8px}.button{background:#333;color:#fff;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;text-decoration:none}.button:hover{background:#555}</style><script>const PRIVY_APP_ID="client-WY2fr1iUtnzfTBZERvcJvo37SUfw8gaCzT9Cn7ri4bTLa",PRIVY_API_URL="https://auth.privy.io/api/v1",loadingMessage=document.getElementById("loading-message"),dashboardContent=document.getElementById("dashboard-content"),notAuthenticated=document.getElementById("not-authenticated"),userIdElement=document.getElementById("user-id"),userEmailElement=document.getElementById("user-email"),userWalletElement=document.getElementById("user-wallet"),logoutButton=document.getElementById("logout-button");
+<img src=/img/black_flag_noclip.png alt="Black Flag Logo" class=logo></h2></header><div class=dashboard-container><h1>Dashboard</h1><p>Welcome to your Black Flag dashboard. Here you can manage your participation in our community.</p><div id=loading-message>Loading your profile...</div><div id=dashboard-content style=display:none><div class=user-info><h2>Your Profile</h2><p id=user-id></p><p id=user-email></p><p id=user-wallet></p></div><div class=dashboard-actions><h2>Actions</h2><button id=logout-button class=button>Logout</button></div></div><div id=not-authenticated style=display:none><p>You need to login to view this page.</p><a href=/login class=button>Go to Login</a></div></div><style>.dashboard-container{max-width:800px;margin:2rem auto;padding:1rem}.user-info,.dashboard-actions{margin-bottom:2rem;padding:1rem;border:1px solid #ddd;border-radius:8px}.button{background:#333;color:#fff;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;text-decoration:none}.button:hover{background:#555}.email-login-message{margin-top:1rem;padding:1rem;border:1px solid #ddd;border-radius:8px;background:#f9f9f9}</style><script>let APP_CONFIG = {
+    privyAppId: null,
+    apiUrl: null
+};
 
-document.addEventListener("DOMContentLoaded",checkAuthentication);
-logoutButton.addEventListener("click",logout);
+const loadingMessage = document.getElementById("loading-message"),
+      dashboardContent = document.getElementById("dashboard-content"),
+      notAuthenticated = document.getElementById("not-authenticated"),
+      userIdElement = document.getElementById("user-id"),
+      userEmailElement = document.getElementById("user-email"),
+      userWalletElement = document.getElementById("user-wallet"),
+      logoutButton = document.getElementById("logout-button");
 
-async function checkAuthentication(){
+// Initialize app on load
+document.addEventListener("DOMContentLoaded", initializeApp);
+logoutButton.addEventListener("click", logout);
+
+// Fetch app configuration from server
+async function initializeApp() {
+    try {
+        const response = await fetch('/api/app-config');
+        if (!response.ok) {
+            throw new Error("Failed to load application configuration");
+        }
+        
+        APP_CONFIG = await response.json();
+        console.log("App initialized with configuration");
+        checkAuthentication();
+    } catch (error) {
+        console.error("Error initializing app:", error);
+        loadingMessage.textContent = "Error loading application. Please try again later.";
+    }
+}
+
+async function checkAuthentication() {
     const token = localStorage.getItem("privy_token");
     const walletAddress = localStorage.getItem("wallet_address");
+    const loginEmail = localStorage.getItem("login_email");
+    const loginMethod = localStorage.getItem("login_method");
     
     if (token) {
-        // Regular Privy token authentication flow
+        // Use our proxy API endpoint instead of calling Privy directly
         try {
-            const response = await fetch(`${PRIVY_API_URL}/users/me`, {
+            const response = await fetch(`/api/user-me`, {
                 method: "GET",
                 headers: {
-                    Authorization: `Bearer ${token}`,
-                    "privy-app-id": PRIVY_APP_ID
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
                 }
             });
             
@@ -27,12 +58,21 @@ async function checkAuthentication(){
             displayUserData(userData);
         } catch (e) {
             console.error("Authentication error:", e);
-            // If token auth fails, check for fallback wallet auth
-            checkFallbackWalletAuth();
+            // If token auth fails, check for fallback auth methods
+            if (walletAddress) {
+                checkFallbackWalletAuth();
+            } else if (loginEmail && loginMethod === "email") {
+                showEmailLoginInfo(loginEmail);
+            } else {
+                showNotAuthenticated();
+            }
         }
     } else if (walletAddress) {
         // Fallback wallet auth flow (when CORS prevented direct Privy API access)
         checkFallbackWalletAuth();
+    } else if (loginEmail && loginMethod === "email") {
+        // Email login fallback
+        showEmailLoginInfo(loginEmail);
     } else {
         // No authentication data found
         showNotAuthenticated();
@@ -68,6 +108,34 @@ async function tryServerSideAuthentication(address, signature, message) {
         console.log("Would attempt server-side authentication here if endpoint existed");
     } catch (e) {
         console.error("Server-side authentication attempt failed:", e);
+    }
+}
+
+function showEmailLoginInfo(email) {
+    // Create a user-like object for the email login
+    const userData = {
+        id: `email-${email.split('@')[0]}`,
+        email: email,
+        authenticated_via: "email-fallback"
+    };
+    
+    // Display the user data
+    displayUserData(userData);
+    
+    // Add special message for email login
+    const specialMessage = document.createElement("div");
+    specialMessage.className = "email-login-message";
+    specialMessage.innerHTML = `
+        <h3>Email Login Verification</h3>
+        <p>We've received your email login request for <strong>${email}</strong>.</p>
+        <p>Since you're using our deployment preview site, we couldn't directly send the verification email due to CORS restrictions.</p>
+        <p>In a production environment, you would receive an email with a login link to complete the verification process.</p>
+    `;
+    
+    // Insert the message after the user info section
+    const userInfo = document.querySelector('.user-info');
+    if (userInfo) {
+        userInfo.appendChild(specialMessage);
     }
 }
 
@@ -109,11 +177,12 @@ async function logout(){
     
     if (token) {
         try {
-            await fetch(`${PRIVY_API_URL}/auth/logout`, {
+            // Use our proxy API for logout
+            await fetch(`/api/auth-logout`, {
                 method: "POST",
                 headers: {
-                    Authorization: `Bearer ${token}`,
-                    "privy-app-id": PRIVY_APP_ID
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
                 }
             });
         } catch (e) {
@@ -127,6 +196,9 @@ async function logout(){
     localStorage.removeItem("wallet_signature");
     localStorage.removeItem("wallet_message");
     localStorage.removeItem("wallet_chain_id");
+    localStorage.removeItem("login_email");
+    localStorage.removeItem("login_method");
+    localStorage.removeItem("login_time");
     
     window.location.href = "/";
 }</script></body></html>
