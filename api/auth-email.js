@@ -33,12 +33,29 @@ export default async function handler(req, res) {
     
     console.log("Calling Privy API with payload", JSON.stringify(privyPayload).substring(0, 200));
     
+    const PRIVY_API_URL = process.env.PRIVY_API_URL || "https://auth.privy.io/api/v1/auth/create-verification";
+    console.log(`Using Privy API URL: ${PRIVY_API_URL}...`);
+
+    // build the privy api auth header
+    const authHeader = req.headers.authorization;
+    console.log(`Using Privy API auth header: ${authHeader}...`);
+    if (!authHeader) {
+      return res.status(401).json({
+        error: 'Authorization header is required',
+        details: 'Missing Authorization header for Privy API'
+      });
+    }
+    // Log the request body for debugging
+    console.log("Request body:", JSON.stringify(req.body));
+    console.log("Privy App ID:", PRIVY_APP_ID);
+
     // Forward the request to Privy's API
     const response = await fetch('https://auth.privy.io/api/v1/auth/create-verification', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'privy-app-id': PRIVY_APP_ID
+        'privy-app-id': PRIVY_APP_ID,
+        'Authorization': req.headers.authorization    // Basic Auth header with your app ID as the username and your app secret as the password.
       },
       body: JSON.stringify(privyPayload)
     });
