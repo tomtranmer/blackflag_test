@@ -10,7 +10,9 @@ export default async function handler(req, res) {
     console.log("Email auth request received");
     
     // Get the Privy App ID from environment variables
-    const PRIVY_APP_ID = process.env.PRIVY_APP_ID || "client-WY2fr1iUtnzfTBZERvcJvo37SUfw8gaCzT9Cn7ri4bTLa";
+    // clyvjj7dm048l8lwj7krukn29 is the TEST PROJECT APP ID
+    const PRIVY_APP_ID = process.env.PRIVY_APP_ID || "clyvjj7dm048l8lwj7krukn29";
+    const PRIVY_API_SECRET = process.env.PRIVY_API_SECRET || "3WYzDQwNt5rXQdZyP5o7w2a64PYvVMDJ34TdeLQGBxmtx8LR3DC8VKzdFpV8yra2bjg2k2PVccCJWg7sxz58Tq2o";
     
     // Verify we have all required fields
     const { email, method, redirect_uri } = req.body;
@@ -30,6 +32,28 @@ export default async function handler(req, res) {
       subject: req.body.subject || "Login to Black Flag",
       message: req.body.message || "Click the link to login to your Black Flag account"
     };
+
+
+    console.log("NEW TEST FOR GET ALL USERS:")
+    const options = {
+      method: 'GET',
+      headers: {
+        'privy-app-id': PRIVY_APP_ID, 
+        Authorization: `Basic ${btoa(PRIVY_APP_ID + ':' + PRIVY_API_SECRET)}`,
+        'Content-Type': 'application/json',
+      }
+    };
+
+    console.log("options: ", options);
+    console.log("fetching users from privy api");
+    
+    fetch('https://api.privy.io/v1/users', options)
+      .then(response => response.json())
+      .then(response => console.log(response))
+      .catch(err => console.error(err));
+
+
+      // ORIGINAL CODE
     
     console.log("Calling Privy API with payload", JSON.stringify(privyPayload).substring(0, 200));
     
