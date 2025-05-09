@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
+  
     // Log request for debugging
     console.log("Email auth request received");
     
@@ -47,13 +47,14 @@ export default async function handler(req, res) {
     console.log("options: ", options);
     console.log("fetching users from privy api");
     
-    fetch('https://api.privy.io/v1/users', options)
+    await fetch('https://api.privy.io/v1/users', options)
       .then(response => response.json())
       .then(response => console.log(response))
       .catch(err => console.error(err));
 
 
-      // ORIGINAL CODE
+  // ORIGINAL CODE
+  try {
     
     console.log("Calling Privy API with payload", JSON.stringify(privyPayload).substring(0, 200));
     
