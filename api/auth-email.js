@@ -46,11 +46,22 @@ export default async function handler(req, res) {
 
     console.log("options: ", options);
     console.log("fetching users from privy api");
+
+    try {
     
-    await fetch('https://api.privy.io/v1/users', options)
-      .then(response => response.json())
-      .then(response => console.log(response))
-      .catch(err => console.error(err));
+      await fetch('https://api.privy.io/v1/users', options)
+        .then(response => response.json())
+        .then(response => console.log(response))
+        .catch(err => console.error(err));
+        
+    } catch (error) {
+      console.error('Error fetching users from Privy API:', error);
+      return res.status(500).json({ 
+        error: 'Failed to connect to Privy API',
+        details: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
 
 
   // ORIGINAL CODE
